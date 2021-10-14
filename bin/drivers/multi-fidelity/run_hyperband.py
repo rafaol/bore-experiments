@@ -4,7 +4,7 @@ import yaml
 
 import hpbandster.core.nameserver as hpns
 
-from hpbandster.optimizers import BOHB
+from hpbandster.optimizers import HyperBand
 
 from pathlib import Path
 
@@ -16,34 +16,27 @@ from bore_experiments.utils import make_name, BenchmarkWorker, HpBandSterLogs
 @click.argument("benchmark_name")
 @click.option("--dataset-name", help="Dataset to use for `fcnet` benchmark.")
 @click.option("--dimensions", type=int, help="Dimensions to use for `michalewicz` and `styblinski_tang` benchmarks.")
-@click.option("--method-name", default="bohb")
+@click.option("--method-name", default="hyperband")
 @click.option("--num-runs", "-n", default=20)
 @click.option("--run-start", default=0)
 @click.option("--num-iterations", "-i", default=500)
 @click.option("--eta", default=3, help="Successive halving reduction factor.")
 @click.option("--min-budget", default=100)
 @click.option("--max-budget", default=100)
-@click.option("--min-points-in-model", default=10)
-@click.option("--top-n-percent", default=15)
-@click.option("--num-samples", default=64)
-@click.option("--random-fraction", default=1/3)
-@click.option("--bandwidth-factor", default=3)
-@click.option("--min-bandwidth", default=1e-3)
-@click.option("--input-dir", default="datasets/fcnet_tabular_benchmarks",
+@click.option("--input-dir", default="datasets/",
               type=click.Path(file_okay=False, dir_okay=True),
               help="Input data directory.")
 @click.option("--output-dir", default="results/",
               type=click.Path(file_okay=False, dir_okay=True),
               help="Output directory.")
-def main(benchmark_name, dataset_name, dimensions, method_name, num_runs, run_start,
-         num_iterations, eta, min_budget, max_budget, min_points_in_model,
-         top_n_percent, num_samples, random_fraction, bandwidth_factor,
-         min_bandwidth, input_dir, output_dir):
+def main(benchmark_name, dataset_name, dimensions, method_name, num_runs,
+         run_start, num_iterations, eta, min_budget, max_budget, input_dir,
+         output_dir):
 
     benchmark = make_benchmark(benchmark_name,
                                dimensions=dimensions,
                                dataset_name=dataset_name,
-                               data_dir=input_dir)
+                               input_dir=input_dir)
     name = make_name(benchmark_name,
                      dimensions=dimensions,
                      dataset_name=dataset_name)
@@ -51,13 +44,7 @@ def main(benchmark_name, dataset_name, dimensions, method_name, num_runs, run_st
     output_path = Path(output_dir).joinpath(name, method_name)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    options = dict(eta=eta, min_budget=min_budget, max_budget=max_budget,
-                   min_points_in_model=min_points_in_model,
-                   top_n_percent=top_n_percent,
-                   num_samples=num_samples,
-                   random_fraction=random_fraction,
-                   bandwidth_factor=bandwidth_factor,
-                   min_bandwidth=min_bandwidth)
+    options = dict(eta=eta, min_budget=min_budget, max_budget=max_budget)
     with output_path.joinpath("options.yaml").open('w') as f:
         yaml.dump(options, f)
 
@@ -76,12 +63,12 @@ def main(benchmark_name, dataset_name, dimensions, method_name, num_runs, run_st
             w.run(background=True)
             workers.append(w)
 
-        rs = BOHB(configspace=benchmark.get_config_space(),
-                  run_id=run_id,
-                  nameserver=ns_host,
-                  nameserver_port=ns_port,
-                  ping_interval=10,
-                  **options)
+        rs = HyperBand(configspace=benchmark.get_config_space(),
+                       run_id=run_id,
+                       nameserver=ns_host,
+                       nameserver_port=ns_port,
+                       ping_interval=10,
+                       **options)
 
         results = rs.run(num_iterations, min_n_workers=num_workers)
 

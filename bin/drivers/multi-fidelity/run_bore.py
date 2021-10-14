@@ -7,7 +7,7 @@ import hpbandster.core.nameserver as hpns
 
 from pathlib import Path
 
-from bore.plugins.hpbandster import BORE
+from bore.plugins.hpbandster import BOREHyperband
 
 from bore_experiments.benchmarks import make_benchmark
 from bore_experiments.utils import make_name, BenchmarkWorker, HpBandSterLogs
@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG)
 @click.argument("benchmark_name")
 @click.option("--dataset-name", help="Dataset to use for `fcnet` benchmark.")
 @click.option("--dimensions", type=int, help="Dimensions to use for `michalewicz` and `styblinski_tang` benchmarks.")
-@click.option("--method-name", default="bore")
+@click.option("--method-name", default="borehb")
 @click.option("--num-runs", "-n", default=20)
 @click.option("--run-start", default=0)
 @click.option("--num-iterations", "-i", default=500)
@@ -32,22 +32,22 @@ logging.basicConfig(level=logging.DEBUG)
 @click.option("--num-random-init", default=10)
 @click.option("--random-rate", default=0.1, type=click.FloatRange(0., 1.))
 @click.option('--retrain/--no-retrain', default=False)
-@click.option("--num-starts", default=5)
-@click.option("--num-samples", default=1024)
+@click.option("--num-starts", default=0)
+@click.option("--num-samples", default=5000)
 @click.option("--batch-size", default=64)
-@click.option("--num-steps-per-iter", default=100)
-@click.option("--num-epochs", type=int)
+@click.option("--num-steps-per-iter", default=50)
+@click.option("--num-epochs-per-iter", type=int)
 @click.option("--optimizer", default="adam")
 @click.option("--num-layers", default=2)
 @click.option("--num-units", default=32)
-@click.option("--activation", default="elu")
-@click.option('--transform', default="sigmoid")
+@click.option("--activation", default="relu")
+@click.option("--l2-factor", default=None, type=float)
+@click.option('--transform', default="identity")
 @click.option("--method", default="L-BFGS-B")
 @click.option("--max-iter", default=1000)
 @click.option("--ftol", default=1e-9)
 @click.option("--distortion", default=None, type=float)
-@click.option('--restart/--no-restart', default=True)
-@click.option("--input-dir", default="datasets/fcnet_tabular_benchmarks",
+@click.option("--input-dir", default="datasets/",
               type=click.Path(file_okay=False, dir_okay=True),
               help="Input data directory.")
 @click.option("--output-dir", default="results/",
@@ -56,14 +56,14 @@ logging.basicConfig(level=logging.DEBUG)
 def main(benchmark_name, dataset_name, dimensions, method_name, num_runs,
          run_start, num_iterations, eta, min_budget, max_budget, gamma,
          num_random_init, random_rate, retrain, num_starts, num_samples,
-         batch_size, num_steps_per_iter, num_epochs, optimizer,
-         num_layers, num_units, activation, transform, method, max_iter, ftol,
-         distortion, restart, input_dir, output_dir):
+         batch_size, num_steps_per_iter, num_epochs_per_iter, optimizer,
+         num_layers, num_units, activation, l2_factor, transform, method,
+         max_iter, ftol, distortion, input_dir, output_dir):
 
     benchmark = make_benchmark(benchmark_name,
                                dimensions=dimensions,
                                dataset_name=dataset_name,
-                               data_dir=input_dir)
+                               input_dir=input_dir)
     name = make_name(benchmark_name,
                      dimensions=dimensions,
                      dataset_name=dataset_name)
@@ -76,11 +76,12 @@ def main(benchmark_name, dataset_name, dimensions, method_name, num_runs,
                    random_rate=random_rate, retrain=retrain,
                    num_starts=num_starts, num_samples=num_samples,
                    batch_size=batch_size, num_steps_per_iter=num_steps_per_iter,
-                   num_epochs=num_epochs, optimizer=optimizer,
+                   num_epochs_per_iter=num_epochs_per_iter, optimizer=optimizer,
                    num_layers=num_layers, num_units=num_units,
-                   activation=activation, transform=transform, method=method,
-                   max_iter=max_iter, ftol=ftol, distortion=distortion,
-                   restart=restart)
+                   activation=activation, l2_factor=l2_factor,
+                   transform=transform,
+                   method=method, max_iter=max_iter, ftol=ftol,
+                   distortion=distortion)
     with output_path.joinpath("options.yaml").open('w') as f:
         yaml.dump(options, f)
 
@@ -99,13 +100,13 @@ def main(benchmark_name, dataset_name, dimensions, method_name, num_runs,
             w.run(background=True)
             workers.append(w)
 
-        rs = BORE(config_space=benchmark.get_config_space(),
-                  run_id=run_id,
-                  nameserver=ns_host,
-                  nameserver_port=ns_port,
-                  ping_interval=10,
-                  seed=run_id,
-                  **options)
+        rs = BOREHyperband(config_space=benchmark.get_config_space(),
+                           run_id=run_id,
+                           nameserver=ns_host,
+                           nameserver_port=ns_port,
+                           ping_interval=10,
+                           seed=run_id,
+                           **options)
 
         results = rs.run(num_iterations, min_n_workers=num_workers)
 

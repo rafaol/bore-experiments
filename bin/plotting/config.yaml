@@ -1,8 +1,62 @@
-names:
+methods:
   random: Random
   tpe: TPE
-  bohb: TPE (\texttt{HpBandSter})
+  # bohb: TPE (\texttt{HpBandSter})
+  bohb: BOHB
   bore: BORE
+  bore-logit: BORE (logit-space)
+  # bore: BORE-HB
+  # bore: QS-BORE
+  # bore-logit: QS-BORE (logit-space, 1000-iters)
+  bore-logit-relu: QS-BORE (logit-space, \texttt{relu})
+  bore-logit-steps-200: QS-BORE (logit-space, 200-steps)
+  bore-logit-max-iter-2000: QS-BORE (logit-space, 2000-iters)
+  bore-logit-max-iter-500: QS-BORE (logit-space, 500-iters)
+  bore-logit-step-size-1e-2: QS-BORE (logit-space, step size $1 \times 10^{-2}$)
   bore-elu-25: BORE
-  gp-botorch: BO-GP (EI)
+  gp-botorch: BO-GP $q$-EI (MC)
   smac: SMAC
+  gpyopt: BO-GP LP-EI 
+  botorch: BO-GP $q$-EI (MC)
+  bore-batch: QS-BORE
+  bore-logit-batch: QS-BORE (logit-space)
+  gpyopt-batch: BO-GP LP-EI 
+  botorch-batch: BO-GP $q$-EI (MC)
+  botorch-kg: BO-GP $q$-KG (MC; one-shot)
+  botorch-std-batch: GP (standardized; MC $q$-EI)
+  hyperband: Hyperband
+benchmarks:
+  branin: Branin-Hoo
+  goldstein_price: Goldstein-Price
+  six_hump_camel: Six-hump Camel
+  hartmann3d: Hartmann3D
+  hartmann6d: Hartmann6D
+  fcnet_parkinsons: \textsc{parkinsons}
+  fcnet_protein: \textsc{protein}
+  fcnet_naval: \textsc{naval}
+  fcnet_slice: \textsc{slice}
+  ucb_f110_racing: \textsc{uc berkeley}
+  ethz_orca_racing: \textsc{eth z{\"u}rich i}
+  ethz_mobil_orca_racing: \textsc{eth z{\"u}rich ii}
+  bohb_surrogate_adult: \textsc{adult}
+  bohb_surrogate_higgs: \textsc{higgs}
+  bohb_surrogate_letter: \textsc{letter}
+  bohb_surrogate_mnist: \textsc{mnist}
+  bohb_surrogate_optdigits: \textsc{optdigits}
+  bohb_surrogate_poker: \textsc{poker}
+  michalewicz_002d: \textsc{michalewicz} $D=2$
+  michalewicz_005d: \textsc{michalewicz} $D=5$
+  michalewicz_010d: \textsc{michalewicz} $D=10$
+  rosenbrock_002d: \textsc{rosenbrock} $D=2$
+  rosenbrock_005d: \textsc{rosenbrock} $D=5$
+  rosenbrock_010d: \textsc{rosenbrock} $D=10$
+  michalewicz: \textsc{michalewicz}
+  styblinski_tang: \textsc{styblinski-tang}
+  rosenbrock: \textsc{rosenbrock}
+datasets:
+  adult: \textsc{adult}
+  higgs: \textsc{higgs}
+  letter: \textsc{letter}
+  mnist: \textsc{mnist}
+  optdigits: \textsc{optdigits}
+  poker: \textsc{poker}

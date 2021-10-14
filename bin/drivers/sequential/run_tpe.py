@@ -2,28 +2,22 @@ import sys
 import click
 import yaml
 
-import numpy as np
-
-from smac.scenario.scenario import Scenario
-from smac.facade.smac_hpo_facade import SMAC4HPO
-from smac.runhistory.runhistory import RunHistory
-# from smac.tae.execute_func import ExecuteTAFuncDict
+from hyperopt import fmin, tpe, STATUS_OK, Trials
+from pathlib import Path
 
 from bore_experiments.benchmarks import make_benchmark
-from bore_experiments.utils import make_name, SMACLogs
-
-from pathlib import Path
+from bore_experiments.utils import make_name, HyperOptLogs
 
 
 @click.command()
 @click.argument("benchmark_name")
 @click.option("--dataset-name", help="Dataset to use for `fcnet` benchmark.")
 @click.option("--dimensions", type=int, help="Dimensions to use for `michalewicz` and `styblinski_tang` benchmarks.")
-@click.option("--method-name", default="smac")
+@click.option("--method-name", default="tpe")
 @click.option("--num-runs", "-n", default=20)
 @click.option("--run-start", default=0)
 @click.option("--num-iterations", "-i", default=500)
-@click.option("--input-dir", default="datasets/fcnet_tabular_benchmarks",
+@click.option("--input-dir", default="datasets/",
               type=click.Path(file_okay=False, dir_okay=True),
               help="Input data directory.")
 @click.option("--output-dir", default="results/",
@@ -35,7 +29,8 @@ def main(benchmark_name, dataset_name, dimensions, method_name, num_runs,
     benchmark = make_benchmark(benchmark_name,
                                dimensions=dimensions,
                                dataset_name=dataset_name,
-                               data_dir=input_dir)
+                               input_dir=input_dir)
+    space = benchmark.get_search_space()
     name = make_name(benchmark_name,
                      dimensions=dimensions,
                      dataset_name=dataset_name)
@@ -47,24 +42,21 @@ def main(benchmark_name, dataset_name, dimensions, method_name, num_runs,
     with output_path.joinpath("options.yaml").open('w') as f:
         yaml.dump(options, f)
 
-    def objective(config, seed):
-        return benchmark.evaluate(config).value
+    def objective(kws):
+        evaluation = benchmark.evaluate(kws)
+        return dict(loss=evaluation.value, status=STATUS_OK,
+                    info=evaluation.duration)
 
     for run_id in range(run_start, num_runs):
 
-        random_state = np.random.RandomState(run_id)
-        scenario = Scenario({"run_obj": "quality",
-                             "runcount-limit": num_iterations,
-                             "cs": benchmark.get_config_space(),
-                             "deterministic": "true",
-                             "output_dir": "foo/"})
-        run_history = RunHistory()
+        trials = Trials()
+        best = fmin(objective,
+                    space=space,
+                    algo=tpe.suggest,
+                    max_evals=num_iterations,
+                    trials=trials)
 
-        smac = SMAC4HPO(scenario=scenario, tae_runner=objective,
-                        runhistory=run_history, rng=random_state)
-        smac.optimize()
-
-        data = SMACLogs(run_history).to_frame()
+        data = HyperOptLogs(trials).to_frame()
         data.to_csv(output_path.joinpath(f"{run_id:03d}.csv"))
 
     return 0
